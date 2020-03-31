@@ -1,0 +1,15 @@
+| rest /services/datamodel/model
+| search eai:acl.app=Splunk_SA_CIM
+| rex field=acceleration "\{\"enabled\"\:(?<accelerated>[\w]+)\,"
+| search accelerated=true 
+| rex max_match=0 field=description "\"owner\"\:\"(?<owner>[\w]+)\""
+| stats values(owner) AS nodename by title
+| rename title AS dm
+| mvexpand nodename
+| search nodename!=BaseEvent
+| map dm nodename maxsearches=40 search="
+| datamodel $dm$ $nodename$ search
+| fieldsummary
+| rex field=field \"(?<node_name>^[\w]+)\.\"
+| eval dm=\"$dm$\"
+| stats max(count) AS total_event_count max(distinct_count) as dc_field_count by dm node_name field"
