@@ -1,0 +1,14 @@
+| rest /services/datamodel/model
+| search eai:acl.app=*
+| fields title
+| rename title AS dm
+| map dm maxsearches=40 search="
+| datamodel $dm$ search
+| fieldsummary
+| eval dm=\"$dm$\"
+| rex field=field \"(?<node_name>^[\w]+)\.\"
+| eval index_hold=if(field==node_name.\".index\",values, \"unknown\")
+| rex field=index_hold max_match=0 mode=sed \"s/[\[|\,]{0,1}\{\\\"value\\\"\:\\\"(\w+)\\\"\,\\\"count\\\"\:([\d]+)[\}|\]]{0,2}/\1:\2 /g\"
+| eventstats values(eval(if(index_hold=\"unknown\", null(), index_hold))) as index_count
+| makemv delim=\" \" index_count
+| stats values(index_count) as index_count max(count) AS total_event_count max(distinct_count) as dc_field_count by dm node_name field"
